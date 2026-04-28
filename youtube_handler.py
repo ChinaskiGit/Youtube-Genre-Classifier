@@ -1,0 +1,167 @@
+import os
+import pickle
+from google_auth_oauthlib.flow import InstalledAppFlow
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from googleapiclient.discovery import build
+
+
+class YouTubePlaylistHandler:
+    """Handle YouTube API operations for playlist retrieval and management"""
+    
+    SCOPES = [
+        'https://www.googleapis.com/auth/youtube',
+        'https://www.googleapis.com/auth/userinfo.profile'
+    ]
+    
+    def __init__(self, credentials_path):
+        self.credentials_path = credentials_path
+        self.youtube = self._authenticate()
+    
+    def _authenticate(self):
+        """Authenticate with YouTube API using OAuth"""
+        creds = None
+        
+        # Load existing token if available
+        if os.path.exists('token.json'):
+            creds = Credentials.from_authorized_user_file('token.json', self.SCOPES)
+        
+        # If no valid credentials, get new ones
+        if not creds or not creds.valid:
+            if creds and creds.expired and creds.refresh_token:
+                creds.refresh(Request())
+            else:
+                flow = InstalledAppFlow.from_client_secrets_file(
+                    self.credentials_path, self.SCOPES)
+                creds = flow.run_local_server(port=0)
+            
+            # Save token for next time
+            with open('token.json', 'w') as token:
+                token.write(creds.to_json())
+        
+        return build('youtube', 'v3', credentials=creds)
+    
+    def get_user_info(self):
+        """Get authenticated user's profile information"""
+        try:
+            request = self.youtube.channels().list(
+                part='snippet',
+                mine=True
+            )
+            response = request.execute()
+            
+            if response.get('items'):
+                channel = response['items'][0]
+                return {
+                    'name': channel['snippet']['title'],
+                    'picture': channel['snippet']['thumbnails']['default']['url'],
+                    'channelId': channel['id']
+                }
+            return None
+        except Exception as e:
+            print(f"Error getting user info: {e}")
+            return None
+    
+    def get_playlist_videos(self, playlist_id, max_results=50):
+        """
+        Fetch all videos from a playlist
+        
+        Args:
+            playlist_id: YouTube playlist ID
+            max_results: Results per API call (max 50)
+        
+        Returns:
+            List of video dictionaries with title, videoId, description
+        """
+        videos = []
+        next_page_token = None
+        
+        while True:
+            request = self.youtube.playlistItems().list(
+                part='snippet',
+                playlistId=playlist_id,
+                maxResults=max_results,
+                pageToken=next_page_token
+            )
+            response = request.execute()
+            
+            # Extract video info
+            for item in response.get('items', []):
+                video_data = {
+                    'title': item['snippet']['title'],
+                    'videoId': item['snippet']['resourceId']['videoId'],
+                    'description': item['snippet']['description'],
+                    'thumbnail': item['snippet']['thumbnails']['default']['url'],
+                    'channelTitle': item['snippet']['channelTitle']
+                }
+                videos.append(video_data)
+            
+            # Check for more pages
+            next_page_token = response.get('nextPageToken')
+            if not next_page_token:
+                break
+        
+        return videos
+    
+    def create_playlist(self, title, description='', privacy='PRIVATE'):
+        """
+        Create a new YouTube playlist
+        
+        Args:
+            title: Playlist title
+            description: Playlist description
+            privacy: PRIVATE, UNLISTED, or PUBLIC
+        
+        Returns:
+            Dictionary with playlist info including 'id'
+        """
+        request = self.youtube.playlists().insert(
+            part='snippet,status',
+            body={
+                'snippet': {
+                    'title': title,
+                    'description': description,
+                    'tags': ['auto-generated', 'genre-classifier']
+                },
+                'status': {
+                    'privacyStatus': privacy
+                }
+            }
+        )
+        response = request.execute()
+        
+        return {
+            'id': response['id'],
+            'title': response['snippet']['title'],
+            'url': f"https://www.youtube.com/playlist?list={response['id']}"
+        }
+    
+    def add_video_to_playlist(self, playlist_id, video_id):
+        """
+        Add a video to a playlist
+        
+        Args:
+            playlist_id: YouTube playlist ID
+            video_id: YouTube video ID
+        
+        Returns:
+            Boolean indicating success
+        """
+        try:
+            request = self.youtube.playlistItems().insert(
+                part='snippet',
+                body={
+                    'snippet': {
+                        'playlistId': playlist_id,
+                        'resourceId': {
+                            'kind': 'youtube#video',
+                            'videoId': video_id
+                        }
+                    }
+                }
+            )
+            request.execute()
+            return True
+        except Exception as e:
+            print(f"Error adding video {video_id} to playlist: {e}")
+            return False

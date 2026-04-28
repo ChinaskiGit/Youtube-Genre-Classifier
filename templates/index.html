@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Genre Classifier</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1>🎵 Genre Classifier</h1>
+                <p class="subtitle">Organize your preferredYouTube music playlist by genre</p>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main">
+            <!-- Step 1: Authentication -->
+            <section class="step" id="step-auth">
+                <div class="step-header">
+                    <h2>Step 1: Connect Your Account</h2>
+                    <p class="step-description">Sign in with your Google account to access your playlists</p>
+                </div>
+                <button class="btn btn-primary" id="auth-btn" onclick="authenticate()">
+                    Sign in with Google
+                </button>
+                <div id="auth-status" class="status"></div>
+            </section>
+
+            <!-- Step 2: Playlist URL -->
+            <section class="step hidden" id="step-playlist">
+                <div class="step-header">
+                    <h2>Step 2: Paste Your Playlist</h2>
+                    <p class="step-description">Paste the URL of your YouTube music playlist</p>
+                </div>
+                
+                <div class="user-card" id="user-card">
+                    <img id="user-avatar" src="" alt="User avatar" class="user-avatar">
+                    <div class="user-info">
+                        <p id="user-name" class="user-name"></p>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <input 
+                        type="text" 
+                        id="playlist-url" 
+                        placeholder="https://www.youtube.com/playlist?list=..." 
+                        class="input"
+                    >
+                    <button class="btn btn-secondary" id="fetch-btn" onclick="fetchPlaylist()">
+                        Analyze
+                    </button>
+                </div>
+                <div id="fetch-status" class="status"></div>
+            </section>
+
+            <!-- Step 3: Results and Review -->
+            <section class="step hidden" id="step-results">
+                <div class="step-header">
+                    <h2>Step 3: Review your playlist groups</h2>
+                    <p class="step-description">We found <span id="total-videos">0</span> videos. Review the genre groups before creating playlists.</p>
+                </div>
+
+                <div class="genre-grid" id="genre-grid">
+                    <!-- Genre summary cards will be populated here -->
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-primary" id="review-btn" onclick="showReview()">
+                        Review & Customize
+                    </button>
+                    <button class="btn btn-outline" onclick="exportJSON()">
+                        Export as JSON
+                    </button>
+                </div>
+                <div id="review-status" class="status"></div>
+            </section>
+
+            <!-- Step 4: Customize and Confirm -->
+            <section class="step hidden" id="step-review">
+                <div class="step-header">
+                    <h2>Step 4: Customize Playlist Groups</h2>
+                    <p class="step-description">Drag video cards between groups and edit playlist names before confirmation.</p>
+                </div>
+
+                <div class="review-board" id="review-board">
+                    <!-- Review board will be populated here -->
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-primary" id="confirm-btn" onclick="confirmPlaylists()">
+                        Confirm and Create Playlists
+                    </button>
+                    <button class="btn btn-secondary" onclick="showStep('step-results')">
+                        Back to summary
+                    </button>
+                </div>
+                <div id="confirm-status" class="status"></div>
+            </section>
+
+            <!-- Step 5: Playlists Created -->
+            <section class="step hidden" id="step-success">
+                <div class="step-header">
+                    <h2>✨ Playlists Created!</h2>
+                    <p class="step-description">Check out your new genre-organized playlists</p>
+                </div>
+
+                <div class="playlists-list" id="playlists-list">
+                    <!-- Playlists will be listed here -->
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="location.reload()">
+                        Start Over
+                    </button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
