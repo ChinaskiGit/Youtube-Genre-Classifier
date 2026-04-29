@@ -54,7 +54,7 @@ class YouTubePlaylistHandler:
                 channel = response['items'][0]
                 return {
                     'name': channel['snippet']['title'],
-                    'picture': channel['snippet']['thumbnails']['default']['url'],
+                    'picture': channel['snippet']['thumbnails'].get('default', {}).get('url', ''),
                     'channelId': channel['id']
                 }
             return None
@@ -71,7 +71,7 @@ class YouTubePlaylistHandler:
             max_results: Results per API call (max 50)
         
         Returns:
-            List of video dictionaries with title, videoId, description
+            List of video dictionaries with title, videoId, description, tags, categoryId
         """
         videos = []
         next_page_token = None
@@ -91,8 +91,10 @@ class YouTubePlaylistHandler:
                     'title': item['snippet']['title'],
                     'videoId': item['snippet']['resourceId']['videoId'],
                     'description': item['snippet']['description'],
-                    'thumbnail': item['snippet']['thumbnails']['default']['url'],
-                    'channelTitle': item['snippet']['channelTitle']
+                    'thumbnail': item['snippet']['thumbnails'].get('default', {}).get('url', ''),
+                    'channelTitle': item['snippet']['channelTitle'],
+                    'tags': [],
+                    'categoryId': ''
                 }
                 videos.append(video_data)
             
@@ -100,8 +102,40 @@ class YouTubePlaylistHandler:
             next_page_token = response.get('nextPageToken')
             if not next_page_token:
                 break
-        
+
+        self._enrich_video_metadata(videos)
         return videos
+
+    def _enrich_video_metadata(self, videos):
+        """Fetch extra metadata for videos such as tags and category."""
+        if not videos:
+            return
+
+        video_ids = [video['videoId'] for video in videos if video.get('videoId')]
+        if not video_ids:
+            return
+
+        for i in range(0, len(video_ids), 50):
+            batch_ids = video_ids[i:i + 50]
+            request = self.youtube.videos().list(
+                part='snippet',
+                id=','.join(batch_ids)
+            )
+            response = request.execute()
+            details_by_id = {
+                item['id']: item['snippet']
+                for item in response.get('items', [])
+            }
+
+            for video in videos:
+                snippet = details_by_id.get(video['videoId'])
+                if not snippet:
+                    continue
+                video['tags'] = snippet.get('tags', [])
+                video['categoryId'] = snippet.get('categoryId', '')
+                # In some cases, the video description is richer than playlist snippet
+                if snippet.get('description'):
+                    video['description'] = snippet['description']
     
     def create_playlist(self, title, description='', privacy='PRIVATE'):
         """

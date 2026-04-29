@@ -84,6 +84,7 @@ body {
         opacity: 0;
         transform: translateY(10px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -256,6 +257,7 @@ body {
         opacity: 0;
         transform: translateY(-5px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -304,52 +306,148 @@ body {
 /* Review board */
 .review-board {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    grid-template-columns: repeat(4, minmax(240px, 1fr));
     gap: 18px;
     width: 100%;
-    margin-bottom: 30px;
+    max-width: 1400px;
+    margin: 0 auto 30px auto;
+    align-items: start;
+    justify-content: center;
+    grid-auto-flow: dense;
 }
 
 .genre-column {
     background-color: rgba(255, 255, 255, 0.04);
     border: 1px solid var(--border);
-    border-radius: 16px;
+    border-radius: 18px;
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    min-height: 220px;
+    min-height: 320px;
+    max-height: 720px;
+    min-width: 0;
+    cursor: grab;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.genre-column:active {
+    cursor: grabbing;
+}
+
+.genre-column.dragging-column {
+    opacity: 0.6;
+    transform: scale(0.98);
+}
+
+.genre-column.collapsed {
+    min-height: auto;
+    max-height: 110px;
+    order: 999;
+}
+
+@media (max-width: 1200px) {
+    .review-board {
+        grid-template-columns: repeat(3, minmax(220px, 1fr));
+    }
+}
+
+@media (max-width: 900px) {
+    .review-board {
+        grid-template-columns: repeat(2, minmax(220px, 1fr));
+    }
+}
+
+@media (max-width: 640px) {
+    .review-board {
+        grid-template-columns: 1fr;
+    }
 }
 
 .column-header {
-    padding: 16px 16px 12px;
+    padding: 18px 18px 14px;
     border-bottom: 1px solid var(--border);
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 10px;
 }
 
 .playlist-title-input {
     width: 100%;
-    padding: 12px 14px;
+    padding: 14px 16px;
     background: var(--bg-secondary);
     border: 1px solid var(--border);
-    border-radius: 10px;
+    border-radius: 12px;
     color: var(--text-primary);
-    font-size: 0.95rem;
+    font-size: 0.96rem;
+}
+
+.header-top {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.collapse-btn {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+.collapse-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
 }
 
 .column-count {
     color: var(--text-secondary);
-    font-size: 0.85rem;
+    font-size: 0.88rem;
 }
 
 .video-list {
     padding: 16px;
-    display: grid;
+    display: flex;
+    flex-direction: column;
     gap: 12px;
     flex: 1;
-    min-height: 120px;
-    background-color: rgba(255, 255, 255, 0.02);
+    min-height: 220px;
+    max-height: 460px;
+    overflow-y: auto;
+    background-color: rgba(255, 255, 255, 0.03);
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.genre-column.collapsed .video-list {
+    max-height: 40px;
+    min-height: 40px;
+    overflow: hidden;
+}
+
+.genre-column.collapsed .video-card {
+    display: none;
+}
+
+.video-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.video-list::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 107, 53, 0.35);
+    border-radius: 999px;
+}
+
+.video-list::-webkit-scrollbar-track {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.video-list.drag-over {
+    border: 2px dashed var(--accent);
+    background-color: rgba(255, 107, 53, 0.06);
 }
 
 .video-card {
@@ -359,6 +457,9 @@ body {
     padding: 14px 16px;
     cursor: grab;
     transition: transform 0.2s ease, border-color 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
 .video-card:hover {
@@ -370,8 +471,17 @@ body {
     opacity: 0.6;
 }
 
-.video-list.drag-over {
-    border: 2px dashed var(--accent);
+.video-thumb {
+    width: 60px;
+    height: 45px;
+    object-fit: cover;
+    border-radius: 6px;
+    flex-shrink: 0;
+}
+
+.video-info {
+    flex: 1;
+    min-width: 0;
 }
 
 .video-title {
@@ -379,11 +489,17 @@ body {
     font-weight: 600;
     color: var(--text-primary);
     margin-bottom: 6px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .video-meta {
     color: var(--text-secondary);
     font-size: 0.82rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* Playlists List */
@@ -466,8 +582,13 @@ body {
 }
 
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 /* Responsive */
