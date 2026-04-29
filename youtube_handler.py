@@ -87,12 +87,27 @@ class YouTubePlaylistHandler:
             
             # Extract video info
             for item in response.get('items', []):
+                snippet = item.get('snippet', {})
+                resource_id = snippet.get('resourceId', {})
+                video_id = resource_id.get('videoId')
+                if not video_id:
+                    continue
+
+                thumbnails = snippet.get('thumbnails', {})
+                thumbnail_url = ''
+                if isinstance(thumbnails, dict):
+                    if 'default' in thumbnails:
+                        thumbnail_url = thumbnails['default'].get('url', '')
+                    elif thumbnails:
+                        first_thumb = next(iter(thumbnails.values()))
+                        thumbnail_url = first_thumb.get('url', '') if isinstance(first_thumb, dict) else ''
+
                 video_data = {
-                    'title': item['snippet']['title'],
-                    'videoId': item['snippet']['resourceId']['videoId'],
-                    'description': item['snippet']['description'],
-                    'thumbnail': item['snippet']['thumbnails']['default']['url'],
-                    'channelTitle': item['snippet']['channelTitle']
+                    'title': snippet.get('title', ''),
+                    'videoId': video_id,
+                    'description': snippet.get('description', ''),
+                    'thumbnail': thumbnail_url,
+                    'channelTitle': snippet.get('channelTitle', '')
                 }
                 videos.append(video_data)
             

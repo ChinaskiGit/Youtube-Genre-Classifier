@@ -20,10 +20,20 @@ user_info = None
 
 
 def extract_playlist_id(url):
-    """Extract playlist ID from YouTube URL"""
+    """Extract playlist ID from YouTube URL or return direct playlist ID."""
+    if not url:
+        return None
+
+    # Standard playlist URL: https://www.youtube.com/playlist?list=PL...
     match = re.search(r'[?&]list=([^&]+)', url)
     if match:
         return match.group(1)
+
+    # If the user pasted a raw playlist ID directly, accept it too.
+    direct_id = url.strip()
+    if re.match(r'^[A-Za-z0-9_-]+$', direct_id):
+        return direct_id
+
     return None
 
 
